@@ -83,21 +83,24 @@ export function RecordedEvidence() {
           </li>
         ))}
       </ol>
-      <details className="recorded-refusals">
-        <summary>Inspect three permission-boundary checks</summary>
-        <p>
-          These were read-only calls against real chain state, not mined failed
-          transactions. The revocation check was performed before expiry.
-        </p>
-        <ul>
-          {recordedRefusals.map((check) => (
-            <li key={check.result}>
-              <span>{check.label}</span>
-              <code>{check.result}</code>
-            </li>
-          ))}
-        </ul>
-      </details>
+      {example.id === "ai-order" ? (
+        <details className="recorded-refusals">
+          <summary>Inspect three permission-boundary checks</summary>
+          <p>
+            These were read-only calls against real chain state, not mined
+            failed transactions. The revocation check was performed before
+            expiry.
+          </p>
+          <ul>
+            {recordedRefusals.map((check) => (
+              <li key={check.result}>
+                <span>{check.label}</span>
+                <code>{check.result}</code>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       <p className="caption">
         Experimental testnet software. A spending budget is not a profit or
         net-loss guarantee. Test tUSDC is not redeemable money.

@@ -67,6 +67,8 @@ The model proposes a direction; it does not authorize a trade. The Worker enforc
 
 The application and account factory are deployed on Somnia Shannon. The Proof Center includes a recorded real model-driven order, confirmed revocation, settlement result and owner withdrawal. That particular AI prediction lost; its zero payout is shown explicitly. Historical receipts are not current account state, performance guarantees or a security audit.
 
+A separate paired integration example verifies positive **owner-triggered** redemption after revocation and withdrawal of all available collateral. It made no model calls and is not evidence of profitable prediction or unattended automatic recovery. Actual protocol payout, total debit and the net test result are shown separately.
+
 Automatic execution is disabled by default and after bounded acceptance runs. Live trading requires a funded account, an explicit owner permission and an operator-allowlisted, time-limited execution service. The interface reports unavailable configuration explicitly. A successful local test is not evidence of a public-chain transaction.
 
 The v1 account supports at most 16 markets per policy and 64 distinct markets over its lifetime. It does not auto-roll into future market windows, place persistent orders, sell early, reinvest profits or hold mainnet assets. Activity/history coverage is explicitly limited to what the service records; it is not a full address indexer.

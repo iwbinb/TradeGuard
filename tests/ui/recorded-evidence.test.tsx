@@ -34,4 +34,32 @@ describe("recorded public-chain examples", () => {
     for (const example of recordedEvidence)
       for (const tx of example.transactions) expect(tx.block).toMatch(/^\d+$/);
   });
+  it("separates paired positive recovery from AI decisions and historical refusal checks", async () => {
+    render(<RecordedEvidence />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Positive redemption" }),
+    );
+    expect(
+      screen.getByText(/Paired integration test · No model calls/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("0.881 tUSDC")).toBeInTheDocument();
+    expect(screen.getByText("1.883604 tUSDC")).toBeInTheDocument();
+    expect(screen.getByText("−0.116396 tUSDC")).toBeInTheDocument();
+    expect(
+      screen.getByText(/not an unattended automatic-recovery test/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Inspect three permission-boundary checks"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("OpenAI GPT-5.6 Luna · 1 request"),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "AI order" }),
+    );
+    expect(screen.getByText("0.499044 tUSDC")).toBeInTheDocument();
+    expect(
+      screen.getByText("Inspect three permission-boundary checks"),
+    ).toBeInTheDocument();
+  });
 });
