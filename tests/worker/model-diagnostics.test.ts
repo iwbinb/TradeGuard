@@ -1,6 +1,7 @@
 import { env, SELF, runInDurableObject } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  diagnosticErrorDetail,
   ModelDiagnostics,
   requireModelDiagnostic,
 } from "../../server/model-diagnostics";
@@ -64,6 +65,16 @@ afterEach(() => {
 });
 
 describe("protected model diagnostics", () => {
+  it("redacts credentials from diagnostic failures", () => {
+    const secret = "sensitive-test-value";
+    const detail = diagnosticErrorDetail(
+      new Error(`Header ${secret}; Bearer another-token`),
+      [secret],
+    );
+    expect(detail).not.toContain(secret);
+    expect(detail).not.toContain("another-token");
+    expect(detail).toContain("[redacted]");
+  });
   it("is absent by default and never exposes credentials in public configuration", async () => {
     const result = await SELF.fetch(
       "https://tradeguard.test/api/diagnostics/model/status",
@@ -100,13 +111,11 @@ describe("protected model diagnostics", () => {
     ).rejects.toMatchObject({ status: 404 });
   });
   it("persists the three-call budget, replays without billing again and closes permanently", async () => {
-    const fetcher = vi
-      .fn()
-      .mockImplementation(async () =>
-        Response.json(response, {
-          headers: { "x-request-id": "req_test_only" },
-        }),
-      );
+    const fetcher = vi.fn().mockImplementation(async () =>
+      Response.json(response, {
+        headers: { "x-request-id": "req_test_only" },
+      }),
+    );
     vi.stubGlobal("fetch", fetcher);
     const stub = env.MODEL_CHECKS.getByName(crypto.randomUUID());
     await runInDurableObject(stub, async (_instance, ctx) => {

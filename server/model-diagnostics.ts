@@ -17,6 +17,20 @@ export const diagnosticRequest = z
 const MAX_ATTEMPTS = 3;
 const RESERVE_MICRO_USD = 30000;
 const BUDGET_MICRO_USD = 100000;
+export function diagnosticErrorDetail(
+  error: unknown,
+  secrets: readonly string[],
+) {
+  let message =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : "Unknown model failure";
+  for (const secret of secrets)
+    if (secret) message = message.split(secret).join("[redacted]");
+  return message
+    .replace(/sk-[A-Za-z0-9_-]{8,}|Bearer\s+\S+/gi, "[redacted]")
+    .slice(0, 400);
+}
 
 function enabled(env: AppEnv) {
   const expires = Number(env.MODEL_CHECK_EXPIRES_AT);
@@ -62,6 +76,7 @@ interface DiagnosticRecord {
     kind: string;
     providerStatus?: number;
     providerCode?: string | null;
+    detail?: string;
   } | null;
   dryRun: true;
   orderSubmitted: false;
@@ -105,6 +120,12 @@ export class ModelDiagnostics extends DurableObject<AppEnv> {
       maxAttempts: MAX_ATTEMPTS,
       reservedMicroUsd: budget.reserved,
       budgetMicroUsd: BUDGET_MICRO_USD,
+      credentialHeaderValid:
+        !!this.env.MODEL_API_KEY &&
+        /^[\x21-\x7e]+$/.test(this.env.MODEL_API_KEY),
+      credentialTrimmedHeaderValid:
+        !!this.env.MODEL_API_KEY &&
+        /^[\x21-\x7e]+$/.test(this.env.MODEL_API_KEY.trim()),
       records,
     };
   }
@@ -213,7 +234,13 @@ export class ModelDiagnostics extends DurableObject<AppEnv> {
               providerStatus: error.status,
               providerCode: error.code,
             }
-          : { kind: "response_incomplete_invalid_or_unavailable" };
+          : {
+              kind: "response_incomplete_invalid_or_unavailable",
+              detail: diagnosticErrorDetail(error, [
+                this.env.MODEL_API_KEY,
+                this.env.MODEL_CHECK_TOKEN ?? "",
+              ]),
+            };
     }
     record.finishedAt = Date.now();
     this.ctx.storage.sql.exec(
