@@ -1,0 +1,94 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tradeguard",
+  "main": "server/index.ts",
+  "compatibility_date": "2026-08-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "AUTH", "class_name": "AuthSession" },
+      { "name": "RUNNERS", "class_name": "TradingRunner" },
+    ],
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["AuthSession", "TradingRunner"] },
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tradeguard",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "vars": {
+    "APP_ENV": "development",
+    "RPC_URL": "https://api.infra.testnet.somnia.network",
+    "INDEXER_URL": "https://dev.smk.somnia.host/v1/graphql",
+    "FACTORY_ADDRESS": "",
+    "EXECUTION_ENABLED": "false",
+    "MODEL_ENDPOINT": "",
+    "MODEL_NAME": "",
+    "MAX_GAS_PRICE_WEI": "20000000000",
+  },
+  "secrets": { "required": [] },
+  "ratelimits": [
+    {
+      "name": "API_LIMITER",
+      "namespace_id": "50312001",
+      "simple": { "limit": 60, "period": 60 },
+    },
+    {
+      "name": "AUTH_LIMITER",
+      "namespace_id": "50312002",
+      "simple": { "limit": 12, "period": 60 },
+    },
+  ],
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "env": {
+    "production": {
+      "name": "tradeguard",
+      "secrets": { "required": [] },
+      "ratelimits": [
+        {
+          "name": "API_LIMITER",
+          "namespace_id": "50312001",
+          "simple": { "limit": 60, "period": 60 },
+        },
+        {
+          "name": "AUTH_LIMITER",
+          "namespace_id": "50312002",
+          "simple": { "limit": 12, "period": 60 },
+        },
+      ],
+      "vars": {
+        "APP_ENV": "production",
+        "RPC_URL": "https://api.infra.testnet.somnia.network",
+        "INDEXER_URL": "https://dev.smk.somnia.host/v1/graphql",
+        "FACTORY_ADDRESS": "0x0Ae628933920D3298Fd7EfBa82C8B19b7d28934b",
+        "EXECUTION_ENABLED": "false",
+        "MODEL_ENDPOINT": "https://api.openai.com/v1/chat/completions",
+        "MODEL_NAME": "gpt-5.6-luna",
+        "MAX_GAS_PRICE_WEI": "20000000000",
+      },
+      "durable_objects": {
+        "bindings": [
+          { "name": "AUTH", "class_name": "AuthSession" },
+          { "name": "RUNNERS", "class_name": "TradingRunner" },
+        ],
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "tradeguard-production",
+          "migrations_dir": "migrations",
+        },
+      ],
+    },
+  },
+}

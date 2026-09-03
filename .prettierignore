@@ -1,0 +1,11 @@
+node_modules
+dist
+.artifacts
+.cache
+.wrangler
+server/env.d.ts
+shared/generated
+.openai
+worker/index.js
+scripts/prepare-sites-build.mjs
+tests/sites-worker.test.mjs

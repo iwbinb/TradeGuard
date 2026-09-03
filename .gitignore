@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.wrangler/
+.artifacts/
+.cache/
+coverage/
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+*.log
+*.cpuprofile
+.DS_Store
+AGENTS.md
+design-qa.md

@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "types": ["vite/client", "node", "@cloudflare/vitest-pool-workers/types"]
+  },
+  "include": [
+    "src",
+    "shared",
+    "server",
+    "scripts/*.ts",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "vitest*.ts"
+  ]
+}

@@ -1,0 +1,29 @@
+name: TradeGuard quality
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+          cache: false
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check
+      - run: npm run check:deploy
+      - run: npm audit --audit-level=high
+      # No deploy, wallet broadcast, model call or secret-bearing workflow.
