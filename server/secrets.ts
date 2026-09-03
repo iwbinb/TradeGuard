@@ -1,6 +1,10 @@
 import { bytesToHex, type Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-export type AppEnv = Env & { EXECUTOR_SEED?: string; MODEL_API_KEY?: string };
+export type AppEnv = Env & {
+  EXECUTOR_SEED?: string;
+  MODEL_API_KEY?: string;
+  MODEL_CHECK_TOKEN?: string;
+};
 export async function executorFor(seed: string, account: Address) {
   if (!/^[a-fA-F0-9]{64}$/.test(seed) || /^0+$/.test(seed))
     throw new Error("Executor seed is not configured securely.");

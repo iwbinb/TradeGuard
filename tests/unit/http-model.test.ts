@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { boundedJson, assertSameOrigin } from "../../server/http";
-import { modelDecision } from "../../server/strategy";
+import { modelDecision, ModelProviderError } from "../../server/strategy";
 import { demoMarket } from "../../shared/simulation";
 afterEach(() => vi.unstubAllGlobals());
 describe("bounded requests", () => {
@@ -42,6 +42,43 @@ describe("bounded requests", () => {
   });
 });
 describe("model adapter", () => {
+  it("does not send oversized prompts", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      modelDecision(
+        { ...demoMarket(), asset: "x".repeat(9000) },
+        "https://model.example",
+        "m",
+        "test-only",
+      ),
+    ).rejects.toThrow(/bounded/);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("reports safe provider error codes without echoing provider text", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            {
+              error: {
+                code: "model_not_found",
+                message: "sensitive-provider-body",
+              },
+            },
+            { status: 404 },
+          ),
+        ),
+    );
+    await expect(
+      modelDecision(demoMarket(), "https://model.example", "m", "test-only"),
+    ).rejects.toMatchObject({ status: 404, code: "model_not_found" });
+    expect(
+      new ModelProviderError(404, "model_not_found").message,
+    ).not.toContain("sensitive-provider-body");
+  });
   it("uses structured output and validates responses", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       Response.json({

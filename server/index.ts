@@ -13,8 +13,10 @@ import { cookieCredentials, requireOwner } from "./auth";
 import { boundedJson, assertSameOrigin, HttpError, json } from "./http";
 import { executorFor, type AppEnv } from "./secrets";
 import { limitApiRequest } from "./rate-limit";
+import { diagnosticRequest, requireModelDiagnostic } from "./model-diagnostics";
 export { AuthSession } from "./auth";
 export { TradingRunner } from "./runner";
+export { ModelDiagnostics } from "./model-diagnostics";
 
 const hexSignature = z.string().regex(/^0x[0-9a-fA-F]{130}$/);
 async function api(request: Request, env: AppEnv) {
@@ -23,6 +25,37 @@ async function api(request: Request, env: AppEnv) {
   if (!["GET", "POST"].includes(request.method))
     throw new HttpError(405, "Method not allowed.");
   if (request.method === "POST") assertSameOrigin(request);
+  if (path.startsWith("/api/diagnostics/model/")) {
+    await requireModelDiagnostic(request, env);
+    const probe = env.MODEL_CHECKS.getByName(env.MODEL_CHECK_RUN_ID);
+    if (path === "/api/diagnostics/model/status" && request.method === "GET")
+      return json(await probe.status());
+    if (path === "/api/diagnostics/model/close" && request.method === "POST")
+      return json(await probe.close());
+    if (path === "/api/diagnostics/model/run" && request.method === "POST") {
+      const { requestId } = diagnosticRequest.parse(
+        await boundedJson(request, 1024),
+      );
+      const { markets } = await listMarkets(env);
+      const now = Math.floor(Date.now() / 1000);
+      const market = markets.find(
+        (m) =>
+          m.status === 1 &&
+          m.expiry > now + 60 &&
+          m.bestAsk &&
+          m.bestBid &&
+          m.fetchedAt >= now - 30,
+      );
+      if (!market)
+        throw new HttpError(
+          503,
+          "No fresh two-sided testnet market is available.",
+        );
+      const result = await probe.run(requestId, market);
+      return json(result, result.httpStatus);
+    }
+    throw new HttpError(404, "Diagnostic route not found.");
+  }
   if (path === "/api/config" && request.method === "GET")
     return json({
       chainId: 50312,

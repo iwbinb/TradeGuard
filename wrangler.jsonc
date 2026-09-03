@@ -14,10 +14,12 @@
     "bindings": [
       { "name": "AUTH", "class_name": "AuthSession" },
       { "name": "RUNNERS", "class_name": "TradingRunner" },
+      { "name": "MODEL_CHECKS", "class_name": "ModelDiagnostics" },
     ],
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["AuthSession", "TradingRunner"] },
+    { "tag": "v2", "new_sqlite_classes": ["ModelDiagnostics"] },
   ],
   "d1_databases": [
     {
@@ -34,6 +36,8 @@
     "EXECUTION_ENABLED": "false",
     "MODEL_ENDPOINT": "",
     "MODEL_NAME": "",
+    "MODEL_CHECK_RUN_ID": "",
+    "MODEL_CHECK_EXPIRES_AT": "0",
     "MAX_GAS_PRICE_WEI": "20000000000",
   },
   "secrets": { "required": [] },
@@ -74,12 +78,15 @@
         "EXECUTION_ENABLED": "false",
         "MODEL_ENDPOINT": "https://api.openai.com/v1/chat/completions",
         "MODEL_NAME": "gpt-5.6-luna",
+        "MODEL_CHECK_RUN_ID": "",
+        "MODEL_CHECK_EXPIRES_AT": "0",
         "MAX_GAS_PRICE_WEI": "20000000000",
       },
       "durable_objects": {
         "bindings": [
           { "name": "AUTH", "class_name": "AuthSession" },
           { "name": "RUNNERS", "class_name": "TradingRunner" },
+          { "name": "MODEL_CHECKS", "class_name": "ModelDiagnostics" },
         ],
       },
       "d1_databases": [
