@@ -74,10 +74,12 @@ Verify the real URL, HTTPS, `/api/health`, `/api/config`, live-market freshness,
 3. Approve an exact collateral deposit, wait for its receipt, then deposit in a separate transaction.
 4. Sign in for agent controls. Fund the displayed **restricted executor** with a small bounded quantity of test STT.
 5. Create a narrow policy for currently open explicit markets. Review every field before signing.
-6. Only after this review, enable server execution and start the reference strategy. Then separately test the model adapter.
+6. Only after this review, set an explicit comma-separated `EXECUTION_OWNER_ALLOWLIST`, an `EXECUTION_EXPIRES_AT` Unix timestamp no more than 24 hours ahead, and enable server execution. An empty, malformed or expired scope is disabled. Start only the reviewed strategy; model use requires its own bounded provider budget.
 7. Verify an actual fill, a rejected permission request, confirmed revocation, settlement, redemption and owner withdrawal. Record exact network, block, market, account and transaction references.
 8. Test stale RPC, rejected signatures, refresh during pending confirmation, permission replacement, service restarts and executor gas exhaustion.
 
-Per policy, the service limits model requests to 20, reserves at most 0.05 STT for automation gas, and monitors for 24 hours. The total gas reservation is conservative, not measured gas expenditure. Pause/restart does not reset these counters. The owner may always use manual recovery, with separate wallet gas costs.
+Per policy, the service defaults to 20 model requests, at most 0.05 STT reserved for automation gas, and 24 hours of monitoring. Operators can reduce `MODEL_CALL_LIMIT` (1–20) and `MONITOR_SECONDS` (1–86400). The operator expiry also ends execution, including new automatic recovery transactions; manual recovery remains available. Invalid limits fail closed. Pause/restart cannot extend the existing monitoring deadline or reset counters for the same policy. These are per-policy limits, not an account-wide billing cap: review new policies separately and restrict allowed owners. The total gas reservation is conservative, not measured gas expenditure.
+
+Decision records explicitly distinguish AI decisions from reference-strategy decisions. They remain separate from receipt-confirmed fills; an abstention or a decision to buy is not proof that a transaction was submitted or filled.
 
 Distinguish local-fork results, `eth_call`, prechecks and Simulation from public-chain receipts. Publish account activity or model reasons only with the owner's consent. Successful deployment does not establish that a model call, order, fill or settlement has occurred.

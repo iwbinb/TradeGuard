@@ -15,6 +15,7 @@ import { executorFor, type AppEnv } from "./secrets";
 import { limitApiRequest } from "./rate-limit";
 import { enrichModelMarket } from "./event-context";
 import { diagnosticRequest, requireModelDiagnostic } from "./model-diagnostics";
+import { executionAvailable } from "./operator-limits";
 export { AuthSession } from "./auth";
 export { TradingRunner } from "./runner";
 export { ModelDiagnostics } from "./model-diagnostics";
@@ -69,8 +70,7 @@ async function api(request: Request, env: AppEnv) {
       collateral: COLLATERAL,
       explorer: EXPLORER,
       liveConfigured: isAddress(env.FACTORY_ADDRESS),
-      executionConfigured:
-        env.EXECUTION_ENABLED === "true" && !!env.EXECUTOR_SEED,
+      executionConfigured: executionAvailable(env),
       modelConfigured: !!(
         env.MODEL_API_KEY &&
         env.MODEL_NAME &&
@@ -82,7 +82,7 @@ async function api(request: Request, env: AppEnv) {
     return json({
       ok: true,
       network: "testnet",
-      executionEnabled: env.EXECUTION_ENABLED === "true",
+      executionEnabled: executionAvailable(env),
     });
   if (path === "/api/markets" && request.method === "GET") {
     const result = await listMarkets(env);

@@ -2,6 +2,7 @@ import { env, SELF, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { executorFor } from "../../server/secrets";
+import { TradingRunner } from "../../server/runner";
 declare module "cloudflare:test" {
   interface ProvidedEnv extends Env {}
 }
@@ -146,6 +147,48 @@ describe("owner challenge and session isolation", () => {
   });
 });
 describe("Durable Object defaults", () => {
+  it("blocks non-allowlisted starts before RPC or wallet access and stops expired persisted work", async () => {
+    const stub = env.RUNNERS.getByName(crypto.randomUUID());
+    await env.DB.exec(
+      "CREATE TABLE IF NOT EXISTS activity(account TEXT,id TEXT,at INTEGER,payload TEXT,PRIMARY KEY(account,id));",
+    );
+    await runInDurableObject(stub, async (_instance, ctx) => {
+      const owner = "0x1111111111111111111111111111111111111111";
+      const account = "0x2222222222222222222222222222222222222222";
+      const config = {
+        ...env,
+        EXECUTION_ENABLED: "true",
+        EXECUTOR_SEED: "test-only",
+        EXECUTION_OWNER_ALLOWLIST: owner,
+        EXECUTION_EXPIRES_AT: String(Math.floor(Date.now() / 1000) + 60),
+      };
+      const runner = new TradingRunner(ctx, config);
+      await expect(runner.start(account, account, "reference")).rejects.toThrow(
+        "not approved",
+      );
+      ctx.storage.sql.exec(
+        "INSERT INTO state(id,json) VALUES(1,?)",
+        JSON.stringify({
+          owner,
+          account,
+          running: true,
+          monitoring: true,
+          strategy: "model",
+          generation: 1,
+          failures: 0,
+          monitorUntil: Date.now() + 1800000,
+          modelCalls: 5,
+          gasSpent: "100",
+        }),
+      );
+      config.EXECUTION_EXPIRES_AT = "0";
+      await runner.alarm();
+      expect(runner.status().running).toBe(false);
+      expect(runner.status().monitoring).toBe(false);
+      expect(runner.status().modelCalls).toBe(5);
+      expect(runner.status().gasSpent).toBe("100");
+    });
+  });
   it("persists pause independently for separate accounts", async () => {
     const a = env.RUNNERS.getByName(crypto.randomUUID());
     const b = env.RUNNERS.getByName(crypto.randomUUID());

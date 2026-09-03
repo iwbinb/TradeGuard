@@ -9,6 +9,11 @@ import { executorFor, type AppEnv } from "./secrets";
 import { modelDecision, quoteBuy, referenceDecision } from "./strategy";
 import { receiptEvidence, reserveGas } from "./execution";
 import { enrichModelMarket, modelContextReady } from "./event-context";
+import {
+  executionOwnerAllowed,
+  monitorDeadline,
+  operatorLimits,
+} from "./operator-limits";
 
 interface Pending {
   raw: Hex;
@@ -122,8 +127,10 @@ export class TradingRunner extends DurableObject<AppEnv> {
       );
   }
   async start(owner: Address, account: Address, strategy: Strategy) {
-    if (this.env.EXECUTION_ENABLED !== "true" || !this.env.EXECUTOR_SEED)
-      throw new Error("Live execution is not enabled.");
+    if (!executionOwnerAllowed(this.env, owner) || !this.env.EXECUTOR_SEED)
+      throw new Error(
+        "Live execution is disabled or this owner is not approved by the operator.",
+      );
     if (
       strategy === "model" &&
       (!this.env.MODEL_API_KEY ||
@@ -167,9 +174,10 @@ export class TradingRunner extends DurableObject<AppEnv> {
       failures: 0,
       modelCalls: samePolicy ? (previous.modelCalls ?? 0) : 0,
       gasSpent: samePolicy ? (previous.gasSpent ?? "0") : "0",
-      monitorUntil: samePolicy
-        ? (previous.monitorUntil ?? Date.now() + 86400000)
-        : Date.now() + 86400000,
+      monitorUntil: monitorDeadline(
+        this.env,
+        samePolicy ? previous.monitorUntil : undefined,
+      ),
     });
     await this.ctx.storage.setAlarm(Date.now() + 1000);
     return this.status();
@@ -228,11 +236,14 @@ export class TradingRunner extends DurableObject<AppEnv> {
         return;
       }
       if (!state.running && !state.monitoring) return;
-      if (this.env.EXECUTION_ENABLED !== "true" || !this.env.EXECUTOR_SEED)
+      if (
+        !executionOwnerAllowed(this.env, state.owner) ||
+        !this.env.EXECUTOR_SEED
+      )
         throw new Error("Execution disabled by the operator.");
       if (Date.now() >= (state.monitorUntil ?? 0))
         throw new Error(
-          "The 24-hour automation window has ended. Manual redemption remains available.",
+          "The configured automation window has ended. Manual redemption remains available.",
         );
       const snapshot = await readAccount(this.env, state.owner);
       if (!this.unchanged(state)) return;
@@ -324,10 +335,10 @@ export class TradingRunner extends DurableObject<AppEnv> {
           );
           return;
         }
-        if ((state.modelCalls ?? 0) >= 20) {
+        if ((state.modelCalls ?? 0) >= operatorLimits(this.env).modelCalls) {
           await this.later(
             { ...state, running: false },
-            "Model request limit reached (20 per permission). Settlement monitoring continues.",
+            "Configured model request limit reached. Settlement monitoring continues.",
           );
           return;
         }
@@ -345,6 +356,18 @@ export class TradingRunner extends DurableObject<AppEnv> {
             )
           : referenceDecision(market);
       if (!this.unchanged(state) || !this.state().running) return;
+      // Keep decision provenance separate from the later receipt event.
+      this.record({
+        id: crypto.randomUUID(),
+        at: Math.floor(Date.now() / 1000),
+        action: `${state.strategy === "model" ? "AI" : "Reference"} decision: ${decision.decision === "buy" ? `Buy ${decision.side}` : "Abstain"}`,
+        amount: "0",
+        status: "pre-check",
+        source: "precheck",
+        detail: decision.reason,
+        marketId: market.id,
+        policyVersion: snapshot.policy.version,
+      });
       if (decision.decision === "abstain") {
         await this.later(state, decision.reason);
         return;
@@ -455,7 +478,13 @@ export class TradingRunner extends DurableObject<AppEnv> {
       detail: string;
     },
   ) {
-    if (!state.account || !this.env.EXECUTOR_SEED) return;
+    if (
+      !state.account ||
+      !state.owner ||
+      !this.env.EXECUTOR_SEED ||
+      !executionOwnerAllowed(this.env, state.owner)
+    )
+      return;
     const executor = await executorFor(this.env.EXECUTOR_SEED, state.account);
     const client = rpc(this.env);
     const [estimate, gasPrice, nonce, balance] = await Promise.all([
@@ -490,6 +519,7 @@ export class TradingRunner extends DurableObject<AppEnv> {
     });
     if (
       !this.unchanged(state) ||
+      !executionOwnerAllowed(this.env, state.owner) ||
       (action.kind === "buy" && !this.state().running)
     )
       return;
@@ -536,7 +566,8 @@ export class TradingRunner extends DurableObject<AppEnv> {
     } catch {
       if (
         Date.now() - pending.preparedAt < 60000 &&
-        this.env.EXECUTION_ENABLED === "true"
+        !!state.owner &&
+        executionOwnerAllowed(this.env, state.owner)
       ) {
         try {
           await client.sendRawTransaction({
