@@ -8,6 +8,7 @@ import { readAccount, readMarket, rpc } from "./protocol";
 import { executorFor, type AppEnv } from "./secrets";
 import { modelDecision, quoteBuy, referenceDecision } from "./strategy";
 import { receiptEvidence, reserveGas } from "./execution";
+import { enrichModelMarket, modelContextReady } from "./event-context";
 
 interface Pending {
   raw: Hex;
@@ -303,7 +304,7 @@ export class TradingRunner extends DurableObject<AppEnv> {
         snapshot.policy.marketIds.map((id) => readMarket(this.env, id as Hex)),
       );
       if (!this.unchanged(state)) return;
-      const market = markets
+      let market = markets
         .flatMap((r) => (r.status === "fulfilled" ? [r.value] : []))
         .find((m) => m.status === 1 && m.expiry > snapshot.now + 30);
       if (!market) {
@@ -314,6 +315,15 @@ export class TradingRunner extends DurableObject<AppEnv> {
         return;
       }
       if (state.strategy === "model") {
+        market = await enrichModelMarket(this.env, market);
+        if (!this.unchanged(state)) return;
+        if (!modelContextReady(market)) {
+          await this.later(
+            state,
+            "Event context is incomplete or stale. No model request or order was sent.",
+          );
+          return;
+        }
         if ((state.modelCalls ?? 0) >= 20) {
           await this.later(
             { ...state, running: false },

@@ -47,6 +47,40 @@ export interface Market {
   takerFee: string;
   minQuantity: string;
   fetchedAt: number;
+  eventContext?: ModelEventContext;
+}
+export interface ModelEventContext {
+  state: "ready" | "incomplete";
+  question: string | null;
+  definitionSource: "official-indexer";
+  mode: "reference" | "fixed" | "unknown";
+  upCondition: string | null;
+  tradingStart: number;
+  expiry: number;
+  oracleQuestionId: string;
+  oracleAdapter: string;
+  referenceQuestionId: string | null;
+  referenceLinkSource: "official-indexer";
+  baseline: {
+    raw: string;
+    human: string | null;
+    decimals: number | null;
+    scaleSource: "adapter-getter" | "pinned-sdk-hub-convention" | null;
+    source: "oracle-adapter" | "indexed-strike";
+    voided: boolean;
+  } | null;
+  spot: {
+    symbol: string;
+    quote: string;
+    raw: string;
+    human: string;
+    decimals: number;
+    oracleUpdatedAtMs: number;
+    sourceUpdatedAtMs: number;
+    source: "official-testnet-price-feed";
+  } | null;
+  missing: string[];
+  warnings: string[];
 }
 export interface Activity {
   id: string;

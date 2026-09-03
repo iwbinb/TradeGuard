@@ -10,6 +10,14 @@ The official indexer discovers binary market IDs. The API filters by expiry and 
 
 The hosted implementation deliberately uses bounded HTTP polling and official SDK ABIs/constants. It does **not** claim to implement the SDK's reactive websocket engine or Somnia native Reactive Contracts. Indexed asset/interval labels are display metadata; on-chain authorization uses explicit immutable event identity.
 
+## Model event context
+
+The model path also reads the official event question and opening-reference link, checks the indexed question ID/window against the module record, and reads the opening answer from the bound oracle adapter. A zero strike is treated as an opening-reference convention, never as a zero-price threshold. Unsupported event rules and unavailable/voided baselines remain explicit missing data.
+
+Oracle price precision comes from `PRICE_DECIMALS` when available. Only the SDK-pinned testnet OracleHub may use the SDK 0.29.0 documented two-decimal convention after a missing/reverting getter; that convention is labeled, not presented as an on-chain getter result. Transport errors and unknown adapters never silently inherit this scale. Indexed question text/reference links are not independent proof of settlement code.
+
+Underlying context comes from the SDK's official testnet USDC-quoted feed. It remains distinct from outcome-share quotes and the final settlement oracle. Both the oracle write time and the upstream source time must be fresh. The model receives human-readable prices and explicit units/provenance. Missing/stale context blocks model-driven buys; filling the fields does not establish a profitable strategy.
+
 ## Contract boundary
 
 The guard pins market ID, market, pool, outcome token, YES/NO token IDs, venue, operator, pool nonce, market expiry and policy version. Every buy rechecks the registry and pool. It refuses reused/recycled bindings, an expired/closed market, a revoked/expired permission, the wrong executor, repeated intents, excessive amount and excessive purchased-outcome price.

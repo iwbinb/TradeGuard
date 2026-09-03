@@ -42,6 +42,33 @@ describe("bounded requests", () => {
   });
 });
 describe("model adapter", () => {
+  it("rejects a buy when complete event context is missing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json({
+            choices: [
+              {
+                finish_reason: "stop",
+                message: {
+                  content: JSON.stringify({
+                    decision: "buy",
+                    side: "up",
+                    confidence: 0.8,
+                    reason: "Unsupported directional view.",
+                  }),
+                },
+              },
+            ],
+          }),
+        ),
+    );
+    await expect(
+      modelDecision(demoMarket(), "https://model.example", "m", "test-only"),
+    ).rejects.toThrow(/fresh event context/);
+  });
   it("does not send oversized prompts", async () => {
     const fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);
@@ -78,14 +105,12 @@ describe("model adapter", () => {
     ).not.toContain("sensitive-provider-body");
   });
   it("uses edge-compatible manual redirects and never follows a credential-bearing request", async () => {
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(null, {
-          status: 307,
-          headers: { Location: "https://untrusted.example/collect" },
-        }),
-      );
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status: 307,
+        headers: { Location: "https://untrusted.example/collect" },
+      }),
+    );
     vi.stubGlobal("fetch", fetcher);
     await expect(
       modelDecision(

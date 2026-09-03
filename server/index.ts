@@ -13,6 +13,7 @@ import { cookieCredentials, requireOwner } from "./auth";
 import { boundedJson, assertSameOrigin, HttpError, json } from "./http";
 import { executorFor, type AppEnv } from "./secrets";
 import { limitApiRequest } from "./rate-limit";
+import { enrichModelMarket } from "./event-context";
 import { diagnosticRequest, requireModelDiagnostic } from "./model-diagnostics";
 export { AuthSession } from "./auth";
 export { TradingRunner } from "./runner";
@@ -51,7 +52,10 @@ async function api(request: Request, env: AppEnv) {
           503,
           "No fresh two-sided testnet market is available.",
         );
-      const result = await probe.run(requestId, market);
+      const result = await probe.run(
+        requestId,
+        await enrichModelMarket(env, market),
+      );
       return json(result, result.httpStatus);
     }
     throw new HttpError(404, "Diagnostic route not found.");
