@@ -2,6 +2,8 @@
 
 Let AI trade within limits you control.
 
+[Open application](https://tradeguard.iwbinb.workers.dev) · [Inspect recorded receipts](https://tradeguard.iwbinb.workers.dev/#/proof)
+
 TradeGuard is a **Somnia Shannon testnet** application for bounded event-contract trading on DreamDEX. The owner sets a market allowlist, per-order limit, total spending budget, outcome-price ceiling and expiry. A restricted executor can request IOC buys but cannot change permissions or withdraw to itself.
 
 This is experimental, unaudited software. A spending budget is **not** a loss guarantee. Test tUSDC is not redeemable money. No mainnet is supported.
@@ -16,6 +18,7 @@ This is experimental, unaudited software. A spending budget is **not** a loss gu
 - Reference strategy and structured-output model adapter behind the same guard contract. Cloudflare Durable Objects retain execution state and signed transaction references before broadcast.
 - Automatic settlement redemption into the account; separate recovery for settlement credits, pool credits and outcome tokens. All automation can be stopped.
 - Receipt-derived activity, partial/no fills, explicit unknown outcomes, per-owner durable browser transaction references and independent recovery instructions.
+- Read-only historical receipt examples, kept separate from the current account and Simulation. Each transaction links to the testnet explorer.
 
 ## Run locally
 
@@ -62,7 +65,9 @@ The model proposes a direction; it does not authorize a trade. The Worker enforc
 
 ## Deployment status and scope
 
-Simulation, real protocol reads and local-fork integration are available. Live trading requires a deployed factory, a funded account, an explicit owner permission and a configured execution service. The interface reports unavailable configuration explicitly. A successful local test is not evidence of a public-chain transaction.
+The application and account factory are deployed on Somnia Shannon. The Proof Center includes a recorded real model-driven order, confirmed revocation, settlement result and owner withdrawal. That particular AI prediction lost; its zero payout is shown explicitly. Historical receipts are not current account state, performance guarantees or a security audit.
+
+Automatic execution is disabled by default and after bounded acceptance runs. Live trading requires a funded account, an explicit owner permission and an operator-allowlisted, time-limited execution service. The interface reports unavailable configuration explicitly. A successful local test is not evidence of a public-chain transaction.
 
 The v1 account supports at most 16 markets per policy and 64 distinct markets over its lifetime. It does not auto-roll into future market windows, place persistent orders, sell early, reinvest profits or hold mainnet assets. Activity/history coverage is explicitly limited to what the service records; it is not a full address indexer.
 

@@ -13,6 +13,7 @@ import { policyState } from "../../shared/policy";
 import type { Workspace } from "../lib/useWorkspace";
 import { ActivityTable } from "../components/ActivityTable";
 import { Button, CopyValue, Empty, Money, Status } from "../components/ui";
+import { RecordedEvidence } from "./RecordedEvidence";
 
 export function Permissions({
   ws,
@@ -288,6 +289,15 @@ export function ProofCenter({
             <p>
               A policy, a transaction, and an independently checkable result.
             </p>
+            <Button
+              onClick={() =>
+                document
+                  .getElementById("recorded-example")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
+            >
+              View recorded receipts
+            </Button>
           </div>
         </div>
         <div className="proof-columns">
@@ -321,6 +331,7 @@ export function ProofCenter({
         </div>
         <ActivityTable rows={evidence} select={select} />
       </section>
+      <RecordedEvidence />
       <section className="panel">
         <div className="section-heading">
           <div>
