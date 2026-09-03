@@ -58,19 +58,17 @@ describe("model adapter", () => {
   it("reports safe provider error codes without echoing provider text", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          Response.json(
-            {
-              error: {
-                code: "model_not_found",
-                message: "sensitive-provider-body",
-              },
+      vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            error: {
+              code: "model_not_found",
+              message: "sensitive-provider-body",
             },
-            { status: 404 },
-          ),
+          },
+          { status: 404 },
         ),
+      ),
     );
     await expect(
       modelDecision(demoMarket(), "https://model.example", "m", "test-only"),
@@ -78,6 +76,30 @@ describe("model adapter", () => {
     expect(
       new ModelProviderError(404, "model_not_found").message,
     ).not.toContain("sensitive-provider-body");
+  });
+  it("uses edge-compatible manual redirects and never follows a credential-bearing request", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(null, {
+          status: 307,
+          headers: { Location: "https://untrusted.example/collect" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      modelDecision(
+        demoMarket(),
+        "https://api.openai.com/v1/chat/completions",
+        "gpt-5.6-luna",
+        "test-only",
+      ),
+    ).rejects.toMatchObject({ status: 307, code: "redirect_refused" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0][1].redirect).toBe("manual");
+    expect(fetcher.mock.calls[0][0].toString()).toBe(
+      "https://api.openai.com/v1/chat/completions",
+    );
   });
   it("uses structured output and validates responses", async () => {
     const fetcher = vi.fn().mockResolvedValue(

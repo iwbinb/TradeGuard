@@ -110,7 +110,7 @@ export async function modelDecision(
     throw new Error("Model input exceeds the bounded request size.");
   const response = await fetch(url, {
     method: "POST",
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(20000),
     headers: {
       "Content-Type": "application/json",
@@ -127,6 +127,10 @@ export async function modelDecision(
     usage: null,
   };
   reportMetrics?.(metrics);
+  if (response.status >= 300 && response.status < 400) {
+    await response.body?.cancel();
+    throw new ModelProviderError(response.status, "redirect_refused");
+  }
   if (!response.ok) {
     const error = z
       .object({ error: z.object({ code: z.string().nullable().optional() }) })
